@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VCPC Timeline · Interactive</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: #f4f7fc;
+      color: #1a2b3e;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timeline-container {
+      max-width: 1000px;
+      width: 100%;
+      background: white;
+      border-radius: 28px;
+      box-shadow: 0 20px 40px -12px rgba(0, 20, 40, 0.25);
+      padding: 2.5rem 2rem;
+      border: 1px solid #d9e2ef;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #0a1e2f;
+      border-left: 7px solid #2a6f97;
+      padding-left: 1.2rem;
+      margin-bottom: 2rem;
+      line-height: 1.2;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    /* each item */
+    .timeline-item {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #dde6f0;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .timeline-item:hover {
+      border-color: #b8cee4;
+      box-shadow: 0 4px 10px -6px rgba(0, 40, 80, 0.2);
+    }
+
+    /* clickable title row */
+    .event-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 1.1rem 1.5rem;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 16px;
+      background: #ffffff;
+      transition: background 0.1s;
+    }
+
+    .event-header:hover {
+      background: #f9fcff;
+    }
+
+    .event-date {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #1f4a6e;
+      letter-spacing: -0.2px;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .event-title {
+      font-weight: 500;
+      font-size: 1.1rem;
+      color: #0d2a40;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .event-title::after {
+      content: "▼";
+      font-size: 0.75rem;
+      color: #7a9bb8;
+      margin-left: 1rem;
+      transition: transform 0.2s;
+    }
+
+    .timeline-item.expanded .event-title::after {
+      transform: rotate(180deg);
+    }
+
+    /* description panel */
+    .event-description {
+      display: none;
+      padding: 0.9rem 1.5rem 1.5rem 1.5rem;
+      border-top: 1px dashed #cbdae9;
+      margin: 0 1px;
+      color: #1d3349;
+      font-size: 0.98rem;
+    }
+
+    .timeline-item.expanded .event-description {
+      display: block;
+    }
+
+    .event-description p {
+      margin-bottom: 0.9rem;
+    }
+
+    .event-description p:last-child {
+      margin-bottom: 0;
+    }
+
+    .event-description ul {
+      margin: 0.6rem 0 0.8rem 1.5rem;
+      padding-left: 0.2rem;
+    }
+
+    .event-description li {
+      margin-bottom: 0.45rem;
+      padding-left: 0.2rem;
+    }
+
+    .event-description li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* email link */
+    .email-link {
+      color: #1f6e9c;
+      font-weight: 500;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+      transition: color 0.1s;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+      margin: 0;
+      display: inline;
+    }
+
+    .email-link:hover {
+      color: #0b3b5c;
+      text-decoration-thickness: 2px;
+    }
+
+    /* popup overlay */
+    .pdf-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .pdf-overlay.active {
+      display: flex;
+    }
+
+    .pdf-modal {
+      background: #fff;
+      width: 90%;
+      max-width: 1100px;
+      height: 85vh;
+      border-radius: 24px;
+      box-shadow: 0 30px 50px -12px black;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: fadeSlide 0.2s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0.7; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .pdf-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 1.6rem;
+      background: #eef3f9;
+      border-bottom: 1px solid #c7d9eb;
+    }
+
+    .pdf-modal-header h3 {
+      font-weight: 500;
+      font-size: 1.1rem;
+      color: #12344f;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 80%;
+    }
+
+    .pdf-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.9rem;
+      line-height: 1;
+      cursor: pointer;
+      color: #2e4f6e;
+      padding: 0 0.4rem;
+      transition: color 0.1s;
+      font-weight: 300;
+    }
+
+    .pdf-close-btn:hover {
+      color: #b22222;
+    }
+
+    .pdf-iframe-container {
+      flex: 1;
+      background: #dfe8f2;
+      overflow: hidden;
+    }
+
+    .pdf-iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .pdf-hint {
+      font-size: 0.8rem;
+      color: #5b7f9c;
+      background: #f0f5fb;
+      padding: 0.4rem 1.6rem;
+      border-top: 1px solid #c7d9eb;
+      text-align: right;
+    }
+
+    /* small screens */
+    @media (max-width: 650px) {
+      .timeline-container { padding: 1.6rem 1rem; }
+      h1 { font-size: 1.7rem; padding-left: 0.8rem; }
+      .event-header { flex-direction: column; align-items: flex-start; gap: 0.25rem; padding: 1rem 1.2rem; }
+      .event-date { font-size: 0.95rem; }
+      .event-title { font-size: 1rem; width: 100%; }
+      .event-description { padding: 1rem 1.2rem 1.3rem; }
+      .pdf-modal { width: 98%; height: 90vh; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="timeline-container">
+  <h1>📋 VCPC · Timeline of Facts and Events</h1>
+  <div class="timeline-list" id="timelineList">
+    <!-- data injected by javascript -->
+  </div>
+</div>
+
+<!-- PDF POPUP OVERLAY -->
+<div class="pdf-overlay" id="pdfOverlay">
+  <div class="pdf-modal">
+    <div class="pdf-modal-header">
+      <h3 id="pdfTitle">Email / Document</h3>
+      <button class="pdf-close-btn" id="closePdfBtn" aria-label="Close PDF">&times;</button>
+    </div>
+    <div class="pdf-iframe-container">
+      <iframe id="pdfFrame" src="about:blank" title="PDF document viewer"></iframe>
+    </div>
+    <div class="pdf-hint">📄 PDF opens from the same folder as this HTML file</div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // TIMELINE DATA — dates + titles + bullet‑point descriptions
+  // --------------------------------------------------------------
+  const timelineData = [
+    {
+      date: "May 26, 2026",
+      title: "VCPC Dev Ltd and Congregation Trustees Meeting",
+      description: `<ul>
+        <li>Elizabeth Wan objected to waiving the external auditing throughout the entire meeting.</li>
+        <li>She discovered that VCPC Development Limited has not been externally audited since its establishment in 2020.</li>
+        <li>The lawyer, Allison, brought forward the waiver motion after the meeting was adjourned.</li>
+        <li>The motion was still passed without a formal vote.</li>
+      </ul>`
+    },
+    {
+      date: "May 27, 2026",
+      title: "Dissent Letter Sent",
+      description: `<ul>
+        <li>Elizabeth sent a dissent letter to Richard and the Trustees.</li>
+        <li>She outlined her findings under subsections 203(2) and 203(3) of the Business Corporations Act (British Columbia).</li>
+        <li>The letter formally recorded her dissent regarding the motion.</li>
+		<li>Elizabeth is willing to provide the Email on demand</li>
+      </ul>`
+    },
+    {
+      date: "May 28, 2026",
+      title: "Garland's Reply to Elizabeth",
+      description: `<ul>
+        <li>Garland replied claiming Elizabeth could not dissent on a decision she was not empowered to make.</li>
+        <li>However, subsections 203(2) and 203(3) of the Business Corporations Act clearly state that, as a shareholder of a BC‑registered business entity, she has the right to vote on the waiver.</li>
+		<li>Elizabeth is willing to provide the Email on demand</li>
+      </ul>`
+    },
+    {
+      date: "May 29, 2026",
+      title: "Elizabeth's Email to Richard and Trustees",
+      description: `<ul>
+        <li>Elizabeth emailed Richard and other trustees to again point out subsections 203(2) and 203(3) of the Business Corporations Act.</li>
+        <li>She clarified that the shareholder (her), not the protector (Session members), holds the voting right for the waiver.</li>
+        <li>She noted the waiver motion brought by Allison appears out of order — it was raised after Rev. Watson's prayer and after the meeting had been adjourned.</li>
+		<li>Elizabeth is willing to provide the Email on demand</li>
+      </ul>`
+    },
+    {
+      date: "May 31, 2026",
+      title: "Annual General Meeting (AGM) and Conflict of Interest Remarks",
+      description: `<ul>
+        <li>A congregation member (Derrick) informed the floor and the Moderator that CRA guidelines prohibit simultaneous roles (Elder on Session and Operational Director of VCPC Development Limited).</li>
+        <li>Interim Moderator Rev. Richard Watson dismissed these regulatory concerns, stating: “To the best of my knowledge and my understanding, I don't believe there is a conflict of interest.”</li>
+        <li>This raised concerns about a severe breach of ministerial duties under Section 13 of the Book of Forms.</li>
+      </ul>`
+    },
+    {
+      date: "May 31, 2026",
+      title: "Richard's Reply to Elizabeth",
+      description: `<ul>
+        <li>After the AGM, Richard recommended that Elizabeth resign.</li>
+        <li>He confused her by stating the waiver is an instruction from the congregation.</li>
+        <li>Richard wrongly equated a motion defeated at the 2025 AGM for a forensic audit with the congregation signalling that VCPC Dev Ltd does not require an external audit.</li>
+		<li>Elizabeth is willing to provide the Email on demand</li>
+      </ul>`
+    },
+    {
+      date: "June 3, 2026",
+      title: "Billy's Email to Session on Legal Liability",
+      description: `<ul>
+        <li>Billy emailed the Session regarding his findings on the legal liability of Nelson, Richard, and the Session.</li>
+        <li><a href="#" class="email-link" data-pdf="06-03-Billy reported Governance Concern To Session.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "June 3, 2026",
+      title: "Richard Acknowledges Receipt",
+      description: `<ul>
+        <li>Richard acknowledged receiving Billy's email.</li>
+      </ul>`
+    },
+    {
+      date: "June 4, 2026",
+      title: "Elizabeth Exposes Richard's Wrongdoing",
+      description: `<ul>
+        <li>Elizabeth emailed Richard and the Session to expose Richard's wrongdoing at the May 26 meeting.</li>
+        <li>After the meeting was adjourned with a closing prayer, Allison Eng brought forward the audit waiver question; Elder Garland Chow motioned to waive and Elder Victor Ling seconded.</li>
+        <li>Without discussion, the IM declared it carried.</li>
+        <li>The IM later admitted at the AGM that he had violated PCC protocol, and the ruling also violated the Business Corporations Act of British Columbia, which requires unanimous shareholder resolution to waive an auditor.</li>
+        <li>Elizabeth voted against the waiver as a shareholder, not as a Session member.</li>
+        <li>The IM threatened her to resign her Trustee role if she would not sign the written audit waiver after the fact.</li>
+        <li>Elizabeth is willing to provide the Email on demand</li>
+      </ul>`
+    },
+    {
+      date: "June 14, 2026",
+      title: "Billy's Follow-Up Email to Session",
+      description: `<ul>
+        <li>Billy sent an email to the Session to follow up after 10 days of waiting.</li>
+      </ul>`
+    },
+    {
+      date: "June 15, 2026",
+      title: "Richard's Reply",
+      description: `<ul>
+        <li>Richard replied, stating that the Session is handling the matter.</li>
+      </ul>`
+    },
+    {
+      date: "June 15, 2026",
+      title: "Billy's Reply to Session",
+      description: `<ul>
+        <li>Billy replied to the Session, assuming that the entire Session is handling the matter.</li>
+      </ul>`
+    },
+    {
+      date: "July 5, 2026",
+      title: "Miller Thomson Legal Opinion Letter to Session",
+      description: `<ul>
+        <li>Miller Thomson sent a legal opinion letter to the Session.</li>
+        <li>The letter claimed: “We understand that there was general consensus that the Development Trust should have audited financial statements on a periodic basis, but that this would be deferred to another year. The Shareholders then passed a motion waiving the appointment of the auditor of the Company for the next fiscal year by consensus (the ‘Waiver Motion’). Our understanding is that no objection was made to the Waiver Motion during the meeting.”</li>
+        <li>However, Rev. Richard Watson, Elder Victor, Elder Garland, and Elder Diana were all present at the May 26 meeting and knew Elizabeth objected, yet they did not correct these false statements even after Billy pointed this out to Miller Thomson on September 28, 2026.</li>
+		<li><a href="#" class="email-link" data-pdf="07-05-Legal Opinion Letter To Session.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "July 6, 2026",
+      title: "Session Meeting",
+      description: `<ul>
+        <li>The Session held a meeting.</li>
+        <li>Billy was told his June 3 email to the Session was discussed.</li>
+        <li>Those present included Rev. Richard Watson, Elder Victor, Elder Garland, and Elder Diana, all of whom were at the May 26 congregation trustee meeting and knew Elizabeth objected to the audit waiver throughout the meeting.</li>
+      </ul>`
+    },
+    {
+      date: "July 13, 2026",
+      title: "Billy's Follow-Up Email to Session",
+      description: `<ul>
+        <li>One week after the Session meeting, Billy sent an email to the Session to follow up on his June 3 email.</li>
+      </ul>`
+    },
+    {
+      date: "July 14, 2026",
+      title: "Session's Response on Jurisdiction",
+      description: `<ul>
+        <li>The Session finally emailed Billy, stating that it does not have jurisdiction to deal with the subject of his concerns raised in his June 3 email.</li>
+		<li><a href="#" class="email-link" data-pdf="07-14-Session Claimed no jurisdiction.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "July 15, 2026",
+      title: "Billy Reports to Martin",
+      description: `<ul>
+        <li>Billy sent an email to Martin to report Richard's misconduct and Nelson's conflict of interest.</li>
+		<li><a href="#" class="email-link" data-pdf="07-15-Billy reported Governance Concern to Westminster.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "August 3, 2026",
+      title: "Martin's Reply on Complaint Handling",
+      description: `<ul>
+        <li>Martin replied that Billy's complaint about Richard and the Session is now being handled by the Commission.</li>
+		<li><a href="#" class="email-link" data-pdf="08-03-Westminster referred the case to Commission.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "September 19, 2026",
+      title: "Session Letter and Miller Thomson Letter",
+      description: `<ul>
+        <li>The Session sent a letter threatening to remove Billy from office and membership, quoting Book of Forms section 134, along with Miller Thomson's letter dated July 5.</li>
+        <li>The Session claimed jurisdiction on September 19 to penalize Billy for his June 3 email complaint while they claimed no jurisdiction to process that same complaint on July 14, 2026.</li>
+        <li>The Session also preempted the Commission's ongoing process to silence Billy before completion of the Commission's investigation.</li>
+		<li><a href="#" class="email-link" data-pdf="09-19-Session Letter To Remove Billy From Office (Preemption of Commission Process).pdf">Click here to read the letter</a>.</li>
+      </ul>`
+    },
+    {
+      date: "September 28, 2026",
+      title: "Billy's Supplemental Context to Miller Thomson",
+      description: `<ul>
+        <li>Billy sent supplemental context to Miller Thomson regarding the legal opinion letter dated July 5.</li>
+        <li>He brought up obvious missing and inaccurate information that needed to be reconsidered.</li>
+        <li><a href="#" class="email-link" data-pdf="09-28-Billy's Email to Miller Thomson.pdf">Click here to read the Email</a>.</li>
+      </ul>`
+    },
+    {
+      date: "September 29, 2026",
+      title: "Formal Report to Westminster",
+      description: `<ul>
+        <li>Billy sent a formal report regarding VCPC Session Overreach and Preemption of the Commission to Westminster.</li>
+		<li><a href="#" class="email-link" data-pdf="09-29-Billy's Email the report to Westminster.pdf">Click here to read the Email</a>.</li>
+		<li><a href="#" class="email-link" data-pdf="09-28-Formal Report to the Presbytery of Westminster.pdf">Click here to read the formal report</a>.</li>
+      </ul>`
+    },
+    {
+      date: "October 5, 2026",
+      title: "Reports to Synod and Response to Session",
+      description: `<ul>
+        <li>Billy reported the Procedural Failure by Westminster and VCPC Session to the Synod of British Columbia. </li>
+		<li><a href="#" class="email-link" data-pdf="10-05-Report of Procedure Failure by Presbytery of Westminster and VCPC Session.pdf">Click here to read the Email to Synod of British Columbia</a>.</li>
+        <li>He also sent a formal response to the VCPC Session regarding its September 19 letter. </li>
+		<li><a href="#" class="email-link" data-pdf="10-05-Formal Response to the VCPC Session Letter on September 19.pdf">Click here to read the formal reply to Session</a>.</li>
+		
+      </ul>`
+    },
+    {
+      date: "October 6, 2026",
+      title: "Face-to-Face Meeting Invitation and Related Developments",
+      description: `<ul>
+        <li>Right after escalating the case to Synod British Columbia, Richard finally invited Billy to a face-to-face meeting. However, there was no written form of the Session's opinion in response to Billy's reply about their procedurally and jurisdictionally improper September 19 letter.</li>
+        <li>Martin responded to the October 5 report to Synod, stating: “I did not feel it was necessary for me to offer any response directly to Mr Lo,” while including inaccurate information implying Billy caused the issue. </li>
+		<li><a href="#" class="email-link" data-pdf="10-06-Martin-reply.pdf">Click here to read Martin's Email</a>.</li>
+        <li>Billy requested that the Session provide a written response to the concerns in the September 19 letter before any face-to-face meeting, citing valid reasons, and Richard promised to call an emergent special Session meeting. </li>
+		<li><a href="#" class="email-link" data-pdf="10-06-Billy ask Session to have formal written reply before meeting.pdf">Click here to read Billy's Email to Session</a>.</li>
+        <li>No further response from the VCPC Session was received.</li>
+        <li>Billy responded to Martin's inaccurate information with facts and events, supported by email evidence. </li>
+		<li><a href="#" class="email-link" data-pdf="10-06-Billy ask Martin questions.pdf">Click here to read Billy's questions to Martin</a>.</li>
+        <li>Martin did not answer any of Billy's questions up to this point.</li>
+      </ul>`
+    }
+  ];
+
+  // --------------------------------------------------------------
+  // RENDER TIMELINE
+  // --------------------------------------------------------------
+  const listEl = document.getElementById('timelineList');
+
+  function renderTimeline() {
+    listEl.innerHTML = '';
+    timelineData.forEach((item, index) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'timeline-item';
+      itemDiv.dataset.index = index;
+
+      // header (date + title) — clickable
+      const header = document.createElement('div');
+      header.className = 'event-header';
+
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'event-date';
+      dateSpan.textContent = item.date;
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'event-title';
+      titleSpan.textContent = item.title;
+
+      header.appendChild(dateSpan);
+      header.appendChild(titleSpan);
+
+      // description
+      const descDiv = document.createElement('div');
+      descDiv.className = 'event-description';
+      descDiv.innerHTML = item.description;  // includes <ul>, <li>, and <a> links
+
+      // toggle expand/collapse
+      header.addEventListener('click', (e) => {
+        // if the click is on a link inside the title (none), ignore
+        if (e.target.closest('a')) return;
+        itemDiv.classList.toggle('expanded');
+      });
+
+      itemDiv.appendChild(header);
+      itemDiv.appendChild(descDiv);
+      listEl.appendChild(itemDiv);
+    });
+
+    // attach PDF link handlers after render
+    attachPdfHandlers();
+  }
+
+  // --------------------------------------------------------------
+  // PDF POPUP logic
+  // --------------------------------------------------------------
+  const overlay = document.getElementById('pdfOverlay');
+  const pdfFrame = document.getElementById('pdfFrame');
+  const pdfTitle = document.getElementById('pdfTitle');
+  const closeBtn = document.getElementById('closePdfBtn');
+
+  function openPdf(filename) {
+    if (!filename) return;
+    // assume PDFs are in same folder as HTML
+    pdfFrame.src = filename;
+    pdfTitle.textContent = filename;
+    overlay.classList.add('active');
+  }
+
+  function closePdf() {
+    overlay.classList.remove('active');
+    pdfFrame.src = 'about:blank'; // clear
+    pdfTitle.textContent = 'Email / Document';
+  }
+
+  // close on X button, overlay click, or ESC
+  closeBtn.addEventListener('click', closePdf);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closePdf();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('active')) {
+      closePdf();
+    }
+  });
+
+  // attach click handlers to all .email-link elements (with data-pdf)
+  function attachPdfHandlers() {
+    document.querySelectorAll('.email-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();          // prevent page jump
+        e.stopPropagation();        // avoid toggling the timeline item
+        const pdfFile = this.dataset.pdf;
+        if (pdfFile) {
+          openPdf(pdfFile);
+        } else {
+          openPdf('email.pdf');     // fallback
+        }
+      });
+    });
+  }
+
+  // initial render
+  renderTimeline();
+</script>
+
+</body>
+</html>
